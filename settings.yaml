@@ -1,0 +1,63 @@
+# Audit settings. Safe to edit; contains NO secrets (secrets live in .env).
+timezone: America/Toronto
+# Timezone of timestamps that arrive WITHOUT an offset (e.g. "2026-03-02 14:05:00").
+# Metabase usually exports UTC-aware strings; if yours are naive local time, set this to America/Toronto.
+source_timezone: UTC
+
+database_path: data/clinician_audit.duckdb
+
+flags:
+  gap_minutes: {NP: 20, MD: 20, CM: 15}   # gap between consults that is worth flagging
+  long_consult_min: 60                    # (future flag) consult longer than this
+  short_consult_min: 3                    # (future flag) consult shorter than this
+  short_vc_min: 3                         # (future flag) video call shorter than this
+  long_vc_min: 45                         # (future flag) video call longer than this
+  late_note_hours: 6                      # (future flag) note written later than this
+  # Flag 2: an idle block at the start/end of a shift (or a whole shift with no consults)
+  empty_block_min: 60                     # idle for at least this long ...
+  empty_min_waiting_minutes: 15           # ... AND patients were waiting for at least this many of those minutes
+  # Flag 3: which values of the "requested visit type" column mean "patient wants video"
+  video_request_values: ["video", "video_call", "vc"]
+  # Only look at "waiting" patients in the provider's province(s)? (true = yes)
+  province_aware_queue: true
+
+# What to do with gaps that fall inside these Humanity shift types:
+#   suppress = do not flag at all      label = still list it, but marked "suppressed (shift type)"
+shift_type_policy:
+  on_call: suppress
+  training: suppress
+  admin: label
+  clinical: flag      # normal shifts (also used when no type is known)
+
+# Names of states in dim_encounter_state_events (matched case-insensitively)
+queue_states:
+  intake: ["intake"]
+  triaged: ["triaged"]
+
+# Care managers (CM): see README "CM caveat"
+cm:
+  role_names: ["CM"]
+  message_window_min: 2      # only used if a message-level table is mapped in column_map.yaml
+
+humanity:
+  base_url: "https://www.humanity.com/api/v2"   # TODO: confirm for your account
+  shifts_path: "/shifts"
+  auth_mode: header          # header = "Authorization: Bearer <key>"; param = ?access_token=<key>
+  # Shift-type detection: if any keyword appears in the shift's schedule/position/title, that type is used.
+  shift_type_keywords:
+    on_call: ["on call", "on-call", "oncall"]
+    training: ["training", "orientation", "onboarding"]
+    admin: ["admin", "meeting", "non-clinical"]
+  # Humanity employee id -> practitioner_id lives in config/people.yaml
+
+metabase:
+  # Names of the date parameters your Metabase card/question accepts
+  start_param: start_date
+  end_param: end_date
+  param_type: date/single     # use date/single for two parameters; see README
+  timeout_seconds: 300
+
+slack:
+  channels: []               # channel IDs to read with conversations.history, e.g. ["C0123456789"]
+  # Audit-log actions to keep (empty = keep all)
+  audit_actions: []

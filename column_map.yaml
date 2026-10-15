@@ -1,0 +1,103 @@
+# =====================================================================
+# column_map.yaml  --  the ONLY place that knows your real Metabase names.
+#
+# Format under each table:
+#     <REAL column name in Metabase>: <internal canonical name>
+# Fix the left-hand side to match your Metabase report. Never change the
+# right-hand side (the code relies on it). Delete or comment out a line if
+# the column does not exist; the app will show a data-quality warning.
+#
+# All tables are read from the master card (METABASE_CARD_ID in .env) unless
+# a table sets its own `card_id`. Columns that are not listed here are
+# DROPPED immediately on load -- so no patient names/details can slip in.
+#
+# Lines marked "CONFIRM" were not in the original spec; they are best guesses.
+#
+# Duplicates removed from the spec on purpose:
+#   * clinical_note_created_at is NOT mapped on encounters; the note time comes
+#     from fct_clinical_notes only (one source of truth).
+#   * "practitioner ids" on facts_encounters -> ONE column (practitioner_id).
+#   * tag_id is mapped only from dim_encounters.
+#   * participant practitioner_id lives only in encounter_participants.
+# =====================================================================
+
+tables:
+  encounters:                      # source: facts_encounters
+    columns:
+      encounter_id: encounter_id
+      started_at: started_at
+      ended_at: ended_at
+      initiated_by: initiated_by
+      triaged_completed_at: triaged_completed_at
+      telecall_clinical_state_started_at: clinical_started_at
+      telecall_clinical_state_ended_at: clinical_ended_at
+      telecall_intake_state_started_at: intake_started_at
+      telecall_intake_state_ended_at: intake_ended_at
+      locality: locality           # province, e.g. ON / BC
+      language: language
+      practitioner_id: practitioner_id
+      # --- needed for flag 3 (video requested but no video call). CONFIRM names:
+      # requested_visit_type: requested_visit_type      # e.g. "video" / "phone"
+      # video_call_started_at: video_call_started_at    # empty = no video call happened
+
+  encounter_tags:                  # source: dim_encounters
+    columns:
+      encounter_id: encounter_id
+      tag_id: tag_id
+
+  participants:                    # source: encounter_participants
+    columns:
+      encounter_id: encounter_id
+      practitioner_id: practitioner_id
+      participant_joined_at: joined_at
+      participant_last_checked_in_at: last_checked_in_at
+      secs_of_participants_activity: engaged_secs
+
+  state_events:                    # source: dim_encounter_state_events  (CONFIRM names)
+    columns:
+      encounter_id: encounter_id
+      state: state                 # e.g. intake / triaged / clinical
+      state_started_at: state_started_at
+      state_ended_at: state_ended_at
+
+  worktimes:                       # source: dim_practitioner_worktimes
+    columns:
+      practitioner_id: practitioner_id
+      start_at: start_at
+      end_at: end_at
+      role: role                   # NP / MD / CM
+      care_group_id: care_group_id
+
+  appointments:                    # source: fct_appointments  (CONFIRM names; used by future flags)
+    columns:
+      appointment_id: appointment_id
+      encounter_id: encounter_id
+      practitioner_id: practitioner_id
+      scheduled_start_at: scheduled_start_at
+      appointment_status: appointment_status
+
+  notes:                           # source: fct_clinical_notes  (CONFIRM names)
+    columns:
+      note_id: note_id
+      encounter_id: encounter_id
+      practitioner_id: practitioner_id
+      clinical_note_created_at: note_created_at
+
+  # ---- OPTIONAL: message-level table for care managers. If this block exists,
+  # ---- CM activity is built from message times (better than the join/check-in
+  # ---- fallback). Remove the leading "#" to turn it on.
+  # cm_messages:
+  #   columns:
+  #     practitioner_id: practitioner_id
+  #     encounter_id: encounter_id
+  #     message_sent_at: sent_at
+
+  # ---- OPTIONAL: chart-access events (used when CHR_ENABLED=true). Many sites
+  # ---- keep these in Metabase; give it its own card id so no new secret is needed.
+  # chr_events:
+  #   card_id: 0
+  #   columns:
+  #     practitioner_id: practitioner_id
+  #     event_at: ts
+  #     event_type: action
+  #     encounter_id: encounter_id

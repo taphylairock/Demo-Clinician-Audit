@@ -1,0 +1,12 @@
+# secrets and data -- NEVER commit these
+.env
+data/
+*.duckdb
+*.duckdb.wal
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.streamlit/secrets.toml

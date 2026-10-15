@@ -1,0 +1,5 @@
+# Maps IDs from other systems to your pseudonymous practitioner_id. Use IDs only -- never names or emails.
+humanity_employee_to_practitioner: {}
+#  "12345": "prac_001"
+slack_user_to_practitioner: {}
+#  "U0123ABCD": "prac_001"
